@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mousa Herzallah | Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --accent: #f97316;
+            --accent-glow: rgba(249, 115, 22, 0.4);
+            --bg: #020617;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: #f1f5f9;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
+            animation: flicker 3s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+            20%, 22%, 24%, 55% { opacity: 0.8; }
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+        }
+
+        /* Lighter cards for Project section */
+        .project-card {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .view-container {
+            display: none;
+            opacity: 0;
+            transition: all 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+            padding-top: 10rem; /* Increased spacing from nav */
+            padding-bottom: 8rem;
+        }
+
+        .view-container.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .nav-btn.nav-active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+        }
+
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: 1s all cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #ai-chat-window {
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(calc(100% + 40px));
+        }
+        #ai-chat-window.open {
+            transform: translateY(0);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 px-6 md:px-12 py-5 flex justify-between items-center glass">
+        <div class="text-2xl font-black tracking-tighter cursor-pointer" onclick="navigateTo('home')">
+            MOUSA<span class="text-orange-500">.</span>
+        </div>
+        <div class="hidden md:flex space-x-10 text-xs font-bold uppercase tracking-widest text-slate-400">
+            <button onclick="navigateTo('home')" class="nav-btn transition hover:text-orange-500" data-view="home">Home</button>
+            <button onclick="navigateTo('about')" class="nav-btn transition hover:text-orange-500" data-view="about">About</button>
+            <button onclick="navigateTo('experience')" class="nav-btn transition hover:text-orange-500" data-view="experience">Experience</button>
+            <button onclick="navigateTo('projects')" class="nav-btn transition hover:text-orange-500" data-view="projects">Work</button>
+            <button onclick="navigateTo('contact')" class="nav-btn transition hover:text-orange-500" data-view="contact">Contact</button>
+        </div>
+        <div class="flex items-center space-x-6">
+            <a href="https://linkedin.com/in/mousaherzallah" target="_blank" class="text-slate-400 hover:text-white transition"><i class="fab fa-linkedin-in text-lg"></i></a>
+            <a href="https://github.com/mousaherzallah" target="_blank" class="text-slate-400 hover:text-white transition"><i class="fab fa-github text-lg"></i></a>
+            <button onclick="toggleAIChat()" class="relative glass w-11 h-11 rounded-full flex items-center justify-center text-orange-500 hover:scale-110 transition shadow-lg">
+                <i class="fas fa-sparkles"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- AI Chat Window -->
+    <div id="ai-chat-window" class="fixed bottom-8 right-8 w-[380px] max-w-[90vw] glass rounded-[32px] overflow-hidden shadow-2xl flex flex-col">
+        <div class="p-5 bg-slate-900/80 flex justify-between items-center border-b border-white/10">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+                    <i class="fas fa-robot text-white text-sm"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-black text-white uppercase tracking-widest">Mousa Assistant</h4>
+                    <p class="text-[10px] text-orange-500 font-bold flex items-center">
+                        <span class="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2 animate-pulse"></span> Online
+                    </p>
+                </div>
+            </div>
+            <button onclick="toggleAIChat()" class="text-slate-500 hover:text-white transition text-lg">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="ai-chat-messages" class="h-96 overflow-y-auto p-5 flex flex-col space-y-3 custom-scrollbar bg-slate-950/20">
+            <div class="chat-bubble ai-bubble bg-slate-800/50 p-3 rounded-2xl text-sm">
+                Hi! I'm Mousa's AI. Ask me about his tech stack or his experience at e&! ✨
+            </div>
+        </div>
+        <div class="p-5 bg-slate-900/60 flex space-x-2 border-t border-white/5">
+            <input type="text" id="ai-chat-input" placeholder="Ask me something..." class="flex-1 bg-slate-800/80 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-orange-500 transition text-white">
+            <button onclick="sendChatMessage()" class="bg-orange-500 w-12 h-12 rounded-2xl flex items-center justify-center hover:bg-orange-600 transition">
+                <i class="fas fa-paper-plane text-white"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Area -->
+    <main class="max-w-7xl mx-auto min-h-screen">
+        
+        <!-- PAGE: HOME -->
+        <div id="view-home" class="view-container active space-y-64">
+            
+            <!-- Dynamic Hero Section -->
+            <section id="hero-trigger" class="flex flex-col items-center justify-center text-center min-h-[70vh] py-10">
+                <div class="mb-10 p-1.5 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 shadow-2xl transition-transform duration-700 hover:scale-105">
+                    <div class="w-40 h-40 md:w-56 md:h-56 rounded-full bg-slate-900 flex items-center justify-center overflow-hidden border-4 border-slate-950 shadow-inner">
+                        <!-- <i class="fas fa-user-astronaut text-8xl text-slate-800"></i> -->
+                         <img src="Mousa.png" alt="">
+                    </div>
+                </div>
+                <div id="hero-interactive-content" class="transition-all duration-300 w-full">
+                    <h1 class="text-5xl md:text-8xl font-black mb-8 tracking-tighter neon-text uppercase leading-none" id="hero-name"></h1>
+                    <p class="text-xl md:text-3xl text-slate-400 font-medium mb-12 max-w-4xl leading-relaxed mx-auto">
+                        I am a <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500 font-extrabold typewriter" id="typewriter"></span> 
+                       
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-8">
+                    <button onclick="navigateTo('projects')" class="btn-action text-white px-14 py-4 rounded-full font-bold transition text-sm uppercase tracking-widest">
+                        Portfolio
+                    </button>
+                    <button onclick="navigateTo('about')" class="glass px-14 py-4 rounded-full font-bold text-slate-300 hover:text-white transition text-sm uppercase tracking-widest">
+                        Biography
+                    </button>
+                </div>
+            </section>
+
+            <!-- Technical Philosophy -->
+            <section class="grid md:grid-cols-2 gap-24 items-center scroll-reveal px-6">
+                <div class="space-y-8">
+                    <span class="text-orange-500 font-black uppercase text-xs tracking-widest">Engineering Ethos</span>
+                    <h2 class="text-5xl font-black leading-tight text-white">Efficiency through <span class="text-orange-500">Intelligence.</span></h2>
+                    <p class="text-slate-400 text-lg leading-relaxed">
+                        My work is built on the belief that software should be more than just functional—it should be autonomous. From designing scalable backends to authoring IEEE research, I prioritize systems that learn and adapt.
+                    </p>
+                </div>
+                <div class="glass p-12 rounded-[50px] border border-white/5 relative">
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 blur-[50px] rounded-full"></div>
+                    <h3 class="text-4xl font-black text-white mb-6 italic">"A code is as strong as the research behind it."</h3>
+                    <p class="text-slate-500 text-sm">— Mousa Herzallah</p>
+                </div>
+            </section>
+
+            <!-- Quick Stats Section -->
+            <section class="grid md:grid-cols-3 gap-10 scroll-reveal px-6">
+                <div class="glass p-10 rounded-3xl border-t-4 border-orange-500 hover:bg-slate-900/40 transition">
+                    <h3 class="text-5xl font-black text-white mb-3 tracking-tighter">3.95</h3>
+                    <p class="text-xs uppercase font-bold text-slate-500 tracking-widest">Cumulative GPA</p>
+                </div>
+                <div class="glass p-10 rounded-3xl border-t-4 border-amber-500 hover:bg-slate-900/40 transition">
+                    <h3 class="text-5xl font-black text-white mb-3 tracking-tighter">IEEE</h3>
+                    <p class="text-xs uppercase font-bold text-slate-500 tracking-widest">Published Research</p>
+                </div>
+                <div class="glass p-10 rounded-3xl border-t-4 border-orange-500 hover:bg-slate-900/40 transition">
+                    <h3 class="text-5xl font-black text-white mb-3 tracking-tighter">5x</h3>
+                    <p class="text-xs uppercase font-bold text-slate-500 tracking-widest">Excellence Awards</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- PAGE: ABOUT -->
+        <div id="view-about" class="view-container space-y-32">
+            <div class="grid lg:grid-cols-12 gap-20 px-6">
+                <div class="lg:col-span-7">
+                    <span class="text-orange-500 font-bold text-xs uppercase tracking-[0.2em] mb-4 block">Academic Profile</span>
+                    <h1 class="text-6xl md:text-7xl font-black mb-10 text-white leading-none">Scholarship <br>& Research.</h1>
+                    <p class="text-slate-400 text-lg leading-relaxed mb-10">
+                        I am currently a Senior Information Technology student at Abu Dhabi University. I've maintained a top-tier GPA while leading technical communities across the UAE.
+                    </p>
+                    <div class="glass p-10 rounded-[40px] border-l-4 border-orange-500 space-y-8">
+                        <div>
+                            <h3 class="font-bold text-xl text-white mb-2">Research Focus</h3>
+                            <p class="text-slate-400 text-sm">Focusing on AI-Linguistic synergy. Author of "SayItRight", a platform for personalized language learning (IEEE 2025).</p>
+                        </div>
+                        <div class="h-px bg-white/5"></div>
+                        <div>
+                            <h3 class="font-bold text-xl text-white mb-4">Volunteering Impact</h3>
+                            <ul class="text-slate-400 space-y-4 text-sm">
+                                <li class="flex items-start"><i class="fas fa-medal text-orange-500 mt-1 mr-4"></i> ADNOC Marathon 2023: Logistics & Volunteer Management.</li>
+                                <li class="flex items-start"><i class="fas fa-medal text-orange-500 mt-1 mr-4"></i> Ramadan Aman: Community charity drive coordinator.</li>
+                                <li class="flex items-start"><i class="fas fa-medal text-orange-500 mt-1 mr-4"></i> URC ADU: Technical registrar for research competition.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-5 space-y-12">
+                    <div class="glass p-10 rounded-[40px] border border-orange-500/10">
+                        <h3 class="font-black text-2xl mb-8">Skill Taxonomy</h3>
+                        <div class="space-y-10">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Programming</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">Python</span>
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">Java</span>
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">JavaScript</span>
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">SQL</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Intelligence & Data</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5 text-orange-500">Prompt Engineering</span>
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">Power BI</span>
+                                    <span class="px-4 py-2 bg-slate-900 rounded-xl text-xs font-bold border border-white/5">MongoDB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: EXPERIENCE -->
+        <div id="view-experience" class="view-container space-y-32">
+            <h2 class="text-center text-6xl md:text-8xl font-black mb-32 text-white">The <span class="text-orange-500">Work.</span></h2>
+            <div class="max-w-5xl mx-auto relative pl-12 px-6">
+                <div class="timeline-line"></div>
+                
+                <!-- GDG MANAGER -->
+                <div class="relative mb-24 scroll-reveal">
+                    <div class="absolute -left-[54px] top-0 w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center border-4 border-slate-950 shadow-lg">
+                        <i class="fas fa-users text-white text-xs"></i>
+                    </div>
+                    <div class="glass p-12 rounded-[50px] hover:border-orange-500/30 transition">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-4xl font-black text-white">Core Team Manager</h3>
+                                <p class="text-orange-500 font-bold text-lg">GDG on Campus ADU</p>
+                            </div>
+                            <span class="text-xs font-bold text-slate-500 mt-2 md:mt-0 uppercase tracking-widest">Jan 2025 — Present</span>
+                        </div>
+                        <p class="text-slate-400 text-base leading-relaxed mb-6">Lead planning and execution of tech workshops and events. Oversee technical support and team collaboration to ensure high-impact community delivery.</p>
+                    </div>
+                </div>
+
+                <!-- OFFICE OF INTL -->
+                <div class="relative mb-24 scroll-reveal">
+                    <div class="absolute -left-[54px] top-0 w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center border-4 border-slate-950 shadow-lg">
+                        <i class="fas fa-globe-americas text-white text-xs"></i>
+                    </div>
+                    <div class="glass p-12 rounded-[50px] hover:border-amber-500/30 transition">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-4xl font-black text-white">Project Administrator</h3>
+                                <p class="text-amber-500 font-bold text-lg">Office of Internationalization, ADU</p>
+                            </div>
+                            <span class="text-xs font-bold text-slate-500 mt-2 md:mt-0 uppercase tracking-widest">Oct 2024 — Present</span>
+                        </div>
+                        <p class="text-slate-400 text-base leading-relaxed">Coordinated ICASF summits, managing 1000+ registrations and logistics for international academic events. Managing university and industry collaborations.</p>
+                    </div>
+                </div>
+
+                <!-- e& INTERNSHIP -->
+                <div class="relative mb-24 scroll-reveal opacity-80">
+                    <div class="absolute -left-[54px] top-0 w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border-4 border-slate-950 shadow-lg">
+                        <i class="fas fa-microchip text-white text-xs"></i>
+                    </div>
+                    <div class="glass p-12 rounded-[50px]">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-4xl font-black text-white">IT and AI Intern</h3>
+                                <p class="text-slate-500 font-bold text-lg">e& UAE (Etisalat Group)</p>
+                            </div>
+                            <span class="text-xs font-bold text-slate-700 mt-2 md:mt-0 uppercase tracking-widest">Jun - Aug 2025</span>
+                        </div>
+                        <p class="text-slate-400 text-base leading-relaxed">Developed internal AI platforms using React.js. Focused on text-to-image and generative audio tools. Optimized UI/UX for corporate systems.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE: PROJECTS -->
+        <div id="view-projects" class="view-container space-y-32">
+            <h2 class="text-center text-6xl md:text-8xl font-black mb-32 text-white">Selected <span class="text-orange-500">Case Studies.</span></h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-12 px-6">
+                
+                <!-- Project 1: SayItRight -->
+                <div class="glass project-card rounded-[50px] overflow-hidden group cursor-pointer flex flex-col h-full" onclick="openProject('sayitright')">
+                    <div class="aspect-video bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
+                        <i class="fas fa-microphone-alt text-8xl text-orange-500/20 group-hover:scale-125 transition duration-700"></i>
+                    </div>
+                    <div class="p-10 flex-1 flex flex-col">
+                        <span class="text-orange-500 font-black text-[10px] tracking-widest uppercase mb-4 block">IEEE Publication</span>
+                        <h3 class="text-3xl font-black text-white mb-6">SayItRight</h3>
+                        <p class="text-slate-300 text-sm mb-10 flex-1">An AI-driven platform for phonetic feedback and language learning, focusing on linguistic precision.</p>
+                        <div class="flex items-center space-x-6">
+                            <a href="https://github.com/mousaherzallah" target="_blank" class="text-slate-300 hover:text-orange-500 transition"><i class="fab fa-github text-xl"></i></a>
+                            <a href="#" target="_blank" class="text-slate-300 hover:text-orange-500 transition"><i class="fas fa-external-link-alt text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 2: GlobeXplorer -->
+                <div class="glass project-card rounded-[50px] overflow-hidden group cursor-pointer flex flex-col h-full" onclick="openProject('globexplorer')">
+                    <div class="aspect-video bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
+                        <i class="fas fa-atlas text-8xl text-amber-500/10 group-hover:scale-125 transition duration-700"></i>
+                    </div>
+                    <div class="p-10 flex-1 flex flex-col">
+                        <span class="text-amber-500 font-black text-[10px] tracking-widest uppercase mb-4 block">Full Stack App</span>
+                        <h3 class="text-3xl font-black text-white mb-6">GlobeXplorer</h3>
+                        <p class="text-slate-300 text-sm mb-10 flex-1">Travel intelligence platform with cost estimation and interactive geospatial city mapping.</p>
+                        <div class="flex items-center space-x-6">
+                            <a href="https://github.com/mousaherzallah" target="_blank" class="text-slate-300 hover:text-amber-500 transition"><i class="fab fa-github text-xl"></i></a>
+                            <a href="#" target="_blank" class="text-slate-300 hover:text-amber-500 transition"><i class="fas fa-external-link-alt text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 3: AI Jobs -->
+                <div class="glass project-card rounded-[50px] overflow-hidden group cursor-pointer flex flex-col h-full" onclick="openProject('powerbi')">
+                    <div class="aspect-video bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
+                        <i class="fas fa-chart-pie text-8xl text-orange-500/10 group-hover:scale-125 transition duration-700"></i>
+                    </div>
+                    <div class="p-10 flex-1 flex flex-col">
+                        <span class="text-orange-500 font-black text-[10px] tracking-widest uppercase mb-4 block">Data Intelligence</span>
+                        <h3 class="text-3xl font-black text-white mb-6">AI Jobs Dashboard</h3>
+                        <p class="text-slate-300 text-sm mb-10 flex-1">Comprehensive Power BI analysis of workforce automation trends and economic displacement.</p>
+                        <div class="flex items-center space-x-6">
+                            <a href="#" class="text-slate-300 hover:text-orange-500 transition"><i class="fas fa-file-powerpoint text-xl"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- PAGE: CONTACT -->
+        <div id="view-contact" class="view-container">
+            <div class="max-w-6xl mx-auto grid lg:grid-cols-2 gap-24 items-center px-6">
+                <div class="glass p-16 rounded-[60px] relative overflow-hidden">
+                    <div class="absolute -top-20 -right-20 w-64 h-64 bg-orange-500/10 blur-[100px] rounded-full"></div>
+                    <h2 class="text-6xl font-black mb-12 text-white leading-tight">Let's start the <span class="text-orange-500">Dialogue.</span></h2>
+                    <div class="space-y-12">
+                        <div class="flex items-center space-x-8 group">
+                            <div class="w-16 h-16 glass flex items-center justify-center rounded-3xl text-orange-500 shadow-xl group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                                <i class="fas fa-envelope text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Inquiries</p>
+                                <p class="text-2xl font-bold text-white">Mousaherzallah@gmail.com</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-8 group">
+                            <div class="w-16 h-16 glass flex items-center justify-center rounded-3xl text-orange-500 shadow-xl group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                                <i class="fas fa-phone-alt text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Direct Line</p>
+                                <p class="text-2xl font-bold text-white">+971 52 992 9367</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <form class="glass p-12 rounded-[50px] space-y-8">
+                    <div class="grid sm:grid-cols-2 gap-8">
+                        <div class="space-y-2">
+                            <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest ml-4">Full Name</label>
+                            <input type="text" placeholder="Your Name" class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-8 py-5 focus:outline-none focus:border-orange-500 transition text-white">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest ml-4">Email</label>
+                            <input type="email" placeholder="john@example.com" class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-8 py-5 focus:outline-none focus:border-orange-500 transition text-white">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest ml-4">Message</label>
+                        <textarea rows="6" placeholder="Brief about your inquiry..." class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-8 py-5 focus:outline-none focus:border-orange-500 transition text-white"></textarea>
+                    </div>
+                    <button type="button" onclick="this.innerHTML='Sent! ✨'" class="btn-action w-full py-6 rounded-2xl font-black text-white uppercase tracking-widest transition shadow-2xl">
+                        Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-20 border-t border-white/5 bg-slate-950/80">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-16 items-center">
+            <div class="text-center md:text-left">
+                <div class="text-3xl font-black mb-4">MOUSA<span class="text-orange-500">.</span></div>
+                <p class="text-slate-500 text-sm font-medium max-w-xs mx-auto md:mx-0">Bridging the gap between academic research and intelligent system design.</p>
+            </div>
+            <div class="flex justify-center space-x-10 text-2xl">
+                <a href="https://linkedin.com/in/mousaherzallah" target="_blank" class="text-slate-500 hover:text-orange-500 transition"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/mousaherzallah" target="_blank" class="text-slate-500 hover:text-orange-500 transition"><i class="fab fa-github"></i></a>
+                <a href="mailto:Mousaherzallah@gmail.com" class="text-slate-500 hover:text-orange-500 transition"><i class="fas fa-envelope"></i></a>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="text-slate-600 text-[10px] uppercase font-bold tracking-[0.3em]">&copy; 2025 Mousa Herzallah.</p>
+                <p class="text-slate-700 text-[9px] uppercase tracking-widest mt-2">Abu Dhabi, United Arab Emirates</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Project Modal -->
+    <div id="project-modal" class="fixed inset-0 z-[100] bg-slate-950/98 hidden items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div class="glass max-w-2xl w-full rounded-[60px] p-16 relative border border-orange-500/20 shadow-2xl">
+            <button onclick="closeProject()" class="absolute top-12 right-12 text-slate-500 hover:text-white transition"><i class="fas fa-times text-2xl"></i></button>
+            <div id="modal-content-inner"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let isIntroComplete = false;
+        let heroMouseSensitivity = 1.0;
+
+        // --- GEMINI API SETUP ---
+        const apiKey = ""; 
+        const MOUSA_CONTEXT = `Mousa Herzallah: Senior BSc IT student at Abu Dhabi University (3.95 CGPA). IEEE published researcher (2025). AI intern at e& UAE. GDG Core Team Manager. Honors: 5x Excellence Awards.`;
+
+        async function askAI(query) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                systemInstruction: { parts: [{ text: `You are Mousa's AI. Context: ${MOUSA_CONTEXT}. Answer concisely and professionally.` }] }
+            };
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Mousa's knowledge base is currently updating! ✨";
+            } catch (error) { return "I'm having a connection glitch. Ask me again! ✨"; }
+        }
+
+        // --- UI CHAT ---
+        function toggleAIChat() {
+            const win = document.getElementById('ai-chat-window');
+            win.classList.toggle('open');
+            if (win.classList.contains('open')) document.getElementById('ai-chat-input').focus();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('ai-chat-input');
+            const container = document.getElementById('ai-chat-messages');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const uDiv = document.createElement('div'); uDiv.className = 'chat-bubble user-bubble self-end bg-orange-500 p-3 rounded-2xl text-sm text-white max-w-[80%]'; uDiv.innerText = msg;
+            container.appendChild(uDiv); input.value = ''; container.scrollTop = container.scrollHeight;
+
+            const aiDiv = document.createElement('div'); aiDiv.className = 'chat-bubble ai-bubble self-start bg-slate-800 p-3 rounded-2xl text-sm max-w-[80%]'; aiDiv.innerText = "...";
+            container.appendChild(aiDiv);
+
+            const reply = await askAI(msg);
+            aiDiv.innerText = reply; container.scrollTop = container.scrollHeight;
+        }
+
+        // --- THREE.JS LOGIC ---
+        let scene, camera, renderer, globe;
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            const geometry = new THREE.IcosahedronGeometry(2, 2);
+            const material = new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true, transparent: true, opacity: 0.12 });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+            camera.position.z = 5;
+            animateThree();
+        }
+
+        function animateThree() {
+            requestAnimationFrame(animateThree);
+            globe.rotation.y += 0.0015;
+            globe.rotation.x += 0.0008;
+            const scrollPercent = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+            globe.position.z = scrollPercent * 6.5; 
+            renderer.render(scene, camera);
+        }
+
+        // --- NAVIGATION & INTERACTION ---
+        function navigateTo(viewId) {
+            document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('nav-active', btn.getAttribute('data-view') === viewId));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- SENSITIVE HERO PARALLAX ---
+        window.addEventListener('mousemove', (e) => {
+            if (globe) {
+                const x = (e.clientX / window.innerWidth) - 0.5;
+                const y = (e.clientY / window.innerHeight) - 0.5;
+                globe.rotation.y += x * 0.04;
+                globe.rotation.x += y * 0.04;
+            }
+
+            if (heroMouseSensitivity > 0) {
+                const el = document.getElementById('hero-interactive-content');
+                if (!el) return;
+                const rect = el.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const mouseX = e.clientX - centerX;
+                const mouseY = e.clientY - centerY;
+                
+                const tiltX = (mouseY / 40) * heroMouseSensitivity;
+                const tiltY = (mouseX / 40) * heroMouseSensitivity;
+                
+                el.style.transform = `rotateX(${-tiltX}deg) rotateY(${tiltY}deg)`;
+            }
+        });
+
+        // --- TYPEWRITER ---
+        function startTyping(text, elementId, speed = 120) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            let i = 0; el.innerHTML = '';
+            function step() { 
+                if (i < text.length) { 
+                    el.innerHTML += text.charAt(i); 
+                    i++; 
+                    setTimeout(step, speed); 
+                } else {
+                    isIntroComplete = true;
+                    let fade = setInterval(() => {
+                        heroMouseSensitivity -= 0.05;
+                        if (heroMouseSensitivity <= 0) {
+                            heroMouseSensitivity = 0;
+                            clearInterval(fade);
+                            document.getElementById('hero-interactive-content').style.transform = `rotateX(0deg) rotateY(0deg)`;
+                        }
+                    }, 100);
+                }
+            }
+            step();
+        }
+
+        const phrases = ["Software Engineer", "AI Specialist","Full-stack Developer", "Tech Researcher", "Project Manger"];
+        let pIndex = 0;
+        function cyclePhrases() {
+            const el = document.getElementById('typewriter');
+            if (!el) return;
+            let text = phrases[pIndex]; let i = 0; el.innerHTML = '';
+            function write() {
+                if (i < text.length) { el.innerHTML += text.charAt(i); i++; setTimeout(write, 80); }
+                else { setTimeout(erase, 2000); }
+            }
+            function erase() {
+                if (i > 0) { el.innerHTML = text.substring(0, i - 1); i--; setTimeout(erase, 40); }
+                else { pIndex = (pIndex + 1) % phrases.length; setTimeout(cyclePhrases, 500); }
+            }
+            write();
+        }
+
+        // --- PROJECT MODALS ---
+        const projectData = {
+            sayitright: {
+                title: "SayItRight",
+                sub: "IEEE Published - 2025",
+                body: "Developed an interactive platform for language learning. Implemented real-time phonetic feedback and pronunciation enhancement using AI APIs.",
+                tech: ["JavaScript", "Python", "Web Speech API"],
+                github: "https://github.com/mousaherzallah",
+                live: "#"
+            },
+            globexplorer: {
+                title: "GlobeXplorer",
+                sub: "Travel Intelligence Platform",
+                body: "A travel platform featuring dynamic cost estimation and interactive city mapping. Built with scalability and performance as core focuses.",
+                tech: ["Node.js", "MongoDB", "Express"],
+                github: "https://github.com/mousaherzallah",
+                live: "#"
+            },
+            powerbi: {
+                title: "AI Jobs Analysis",
+                sub: "Data Visualization Dashboard",
+                body: "Built a comprehensive Power BI dashboard analyzing global AI job trends and workforce automation impact.",
+                tech: ["Power BI", "Data Modeling", "Excel"],
+                github: "#",
+                live: "#"
+            }
+        };
+
+        function openProject(id) {
+            const p = projectData[id];
+            const inner = document.getElementById('modal-content-inner');
+            inner.innerHTML = `
+                <span class="text-orange-500 font-black uppercase text-xs mb-6 block tracking-widest">${p.sub}</span>
+                <h2 class="text-5xl font-black mb-10 text-white">${p.title}</h2>
+                <p class="text-slate-300 text-lg leading-relaxed mb-12">${p.body}</p>
+                <div class="flex flex-wrap gap-4 mb-16">
+                    ${p.tech.map(t => `<span class="px-6 py-3 glass rounded-2xl text-xs font-bold text-white">${t}</span>`).join('')}
+                </div>
+                <div class="flex gap-6">
+                    <a href="${p.github}" target="_blank" class="btn-action text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center"><i class="fab fa-github mr-3 text-lg"></i> Source</a>
+                    <a href="${p.live}" target="_blank" class="glass text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center"><i class="fas fa-external-link-alt mr-3 text-lg"></i> Live Demo</a>
+                </div>
+            `;
+            const modal = document.getElementById('project-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.style.opacity = '1', 10);
+        }
+
+        function closeProject() {
+            const modal = document.getElementById('project-modal');
+            modal.style.opacity = '0';
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        // --- SCROLL REVEAL ---
+        function revealOnScroll() {
+            document.querySelectorAll('.scroll-reveal').forEach(el => {
+                if (el.getBoundingClientRect().top < window.innerHeight - 80) el.classList.add('visible');
+            });
+        }
+
+        window.onload = () => {
+            initThree();
+            startTyping("MOUSA HERZALLAH", "hero-name", 130);
+            setTimeout(cyclePhrases, 2500);
+            window.addEventListener('scroll', revealOnScroll);
+            revealOnScroll();
+            document.getElementById('ai-chat-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+        };
+    </script>
+</body>
+</html>
